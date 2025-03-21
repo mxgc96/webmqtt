@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard MQTT</title>
+  <!-- Usamos CDN alternativo para Paho MQTT -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #333;
+    }
+    #status {
+      font-weight: bold;
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      background: #0078d7;
+      color: #fff;
+      border-radius: 4px;
+    }
+    #messages {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      width: 100%;
+      max-width: 1200px;
+    }
+    .mensaje {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      width: 250px;
+      word-wrap: break-word;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .mensaje:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    /* Estilos para el contenedor de cada mensaje */
+    .mensaje h3 {
+      margin-top: 0;
+      font-size: 1.1em;
+      color: #0078d7;
+    }
+    .mensaje p {
+      margin: 5px 0;
+      font-size: 0.95em;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dashboard MQTT</h1>
+  <div id="status">Conectando...</div>
+  <div id="messages"></div>
+
+  <script>
+    // Esperar a que el DOM esté completamente cargado
+    document.addEventListener('DOMContentLoaded', function() {
+      // Configuración de HiveMQ Cloud (reemplaza los valores)
+      const broker = "639f6e32f1f4428fb2f4ff85f5a979e3.s1.eu.hivemq.cloud";
+      const port = 8884;
+      const clientId = "web_client_" + Math.floor(Math.random() * 10000);
+      const topic = "sensor/datos";
+
+      // Crear el cliente MQTT usando la librería cargada
+      const client = new Paho.MQTT.Client(broker, port, clientId);
+
+      // Callback para cuando se pierde la conexión
+      client.onConnectionLost = function(responseObject) {
+        if (responseObject.errorCode !== 0) {
+          console.log("Conexión perdida: " + responseObject.errorMessage);
+          document.getElementById("status").innerText = "Conexión perdida: " + responseObject.errorMessage;
+        }
+      };
+
+      // Callback para cuando llega un mensaje
+      client.onMessageArrived = function(message) {
+        console.log("Mensaje recibido: " + message.payloadString);
+        mostrarMensaje(message.payloadString);
+      };
+
+      // Opciones de conexión, incluyendo autenticación y SSL
+      const options = {
+        useSSL: true,
+        timeout: 3,
+        onSuccess: function() {
+          document.getElementById("status").innerText = "Conectado al broker MQTT";
+          console.log("Conectado");
+          // Suscribirse al tópico
+          client.subscribe(topic, { qos: 1 });
+        },
+        onFailure: function(message) {
+          document.getElementById("status").innerText = "Error al conectar: " + message.errorMessage;
+          console.log("Error de conexión: " + message.errorMessage);
+        },
+        userName: "hivemq.webclient.1742535773985",
+        password: "FaG!9JE7h*.@0dzlL4pV"
+      };
+
+      // Conectar el cliente
+      client.connect(options);
+
+      // Función para mostrar cada mensaje en formato tarjeta
+      function mostrarMensaje(payload) {
+        const messagesDiv = document.getElementById("messages");
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "mensaje";
+
+        // Intentamos parsear el mensaje como JSON para formatearlo
+        try {
+          const data = JSON.parse(payload);
+          // Creamos un título con el id_nodo
+          const titulo = document.createElement("h3");
+          titulo.innerText = "ID Nodo: " + data.id_nodo;
+          tarjeta.appendChild(titulo);
+
+          // Recorrer el objeto y mostrar cada clave-valor
+          for (const key in data) {
+            if (key !== "id_nodo") {
+              const parrafo = document.createElement("p");
+              parrafo.innerText = key + ": " + data[key];
+              tarjeta.appendChild(parrafo);
+            }
+          }
+        } catch (e) {
+          // Si no es JSON, mostrar el payload completo
+          tarjeta.innerText = payload;
+        }
+        messagesDiv.prepend(tarjeta);
+      }
+    });
+  </script>
+</body>
+</html>
