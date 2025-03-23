@@ -2,128 +2,295 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard MQTT - Tabla</title>
-  <!-- Bootstrap CSS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard MQTT - Responsivo</title>
+  <!-- Bootstrap CSS para estilos -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Font Awesome para iconos -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Librería Paho MQTT -->
+  <!-- Librería Paho MQTT para comunicación MQTT -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
   <style>
+    /* Estilos generales para la página */
     body {
       background: #f4f7f9;
       padding: 20px;
     }
-    #status {
+    
+    /* Estilo para el indicador de estado de conexión */
+    #estadoConexion {
       margin-bottom: 20px;
     }
-    .table-container {
+    
+    /* Contenedor de la tabla con altura máxima y scroll */
+    .contenedor-tabla {
       max-height: 70vh;
       overflow-y: auto;
+    }
+    
+    /* Estilos para las tarjetas */
+    .tarjeta {
+      margin-bottom: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.3s;
+    }
+    
+    /* Efecto de elevación al pasar el mouse sobre la tarjeta */
+    .tarjeta:hover {
+      transform: translateY(-5px);
+    }
+    
+    /* Estilo para el encabezado de las tarjetas */
+    .encabezado-tarjeta {
+      background-color: #343a40;
+      color: white;
+      font-weight: bold;
+    }
+    
+    /* Estilo para el valor del sensor (número grande) */
+    .valor-sensor {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    
+    /* Estilo para la etiqueta del sensor */
+    .etiqueta-sensor {
+      color: #6c757d;
+    }
+    
+    /* Estilo para la marca de tiempo */
+    .marca-tiempo {
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    
+    /* Media queries para diseño responsivo */
+    /* Para pantallas pequeñas (móviles) mostrar tarjetas */
+    @media (max-width: 992px) {
+      .vista-tabla {
+        display: none;
+      }
+      .vista-tarjetas {
+        display: block;
+      }
+    }
+    
+    /* Para pantallas grandes mostrar tabla */
+    @media (min-width: 993px) {
+      .vista-tabla {
+        display: block;
+      }
+      .vista-tarjetas {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1 class="mb-4 text-center">Dashboard MQTT</h1>
-    <div id="status" class="alert alert-info text-center">Conectando...</div>
-    <div class="table-container">
-      <table class="table table-striped table-hover">
-        <thead class="table-dark">
-          <tr>
-            <th scope="col"><i class="fa fa-id-badge"></i> ID Nodo</th>
-            <th scope="col"><i class="fa fa-sort-numeric-asc"></i> Contador</th>
-            <th scope="col"><i class="fas fa-thermometer-half"></i> Temperatura</th>
-            <th scope="col"><i class="fas fa-tint"></i> Humedad</th>
-            <th scope="col"><i class="fas fa-fire"></i> Índice de calor</th>
-            <th scope="col"><i class="fas fa-glass-water-droplet"></i> Humedad Caja A</th>
-            <th scope="col"><i class="fas fa-glass-water-droplet"></i> Humedad Caja B</th>
-            <th scope="col"><i class="fas fa-signal"></i> SNR</th>
-            <th scope="col"><i class="fas fa-wifi"></i> RSSI</th>
-          </tr>
-        </thead>
-        <tbody id="dataTable">
-          <!-- Se irán agregando las filas de datos -->
-        </tbody>
-      </table>
+    
+    <!-- Vista de tabla para pantallas grandes -->
+    <div class="vista-tabla">
+      <div class="contenedor-tabla">
+        <table class="table table-striped table-hover">
+          <thead class="table-dark">
+            <tr>
+              <th scope="col"><i class="fa fa-id-badge"></i> ID Nodo</th>
+              <th scope="col"><i class="fa fa-sort-numeric-asc"></i> Contador</th>
+              <th scope="col"><i class="fas fa-thermometer-half"></i> Temperatura</th>
+              <th scope="col"><i class="fas fa-tint"></i> Humedad</th>
+              <th scope="col"><i class="fas fa-fire"></i> Índice de calor</th>
+              <th scope="col"><i class="fas fa-glass-water-droplet"></i> Humedad Caja A</th>
+              <th scope="col"><i class="fas fa-glass-water-droplet"></i> Humedad Caja B</th>
+              <th scope="col"><i class="fas fa-signal"></i> SNR</th>
+              <th scope="col"><i class="fas fa-wifi"></i> RSSI</th>
+            </tr>
+          </thead>
+          <tbody id="tablaDatos">
+            <!-- Se irán agregando las filas de datos dinámicamente -->
+          </tbody>
+        </table>
+      </div>
     </div>
+    
+    <!-- Vista de tarjetas para dispositivos móviles -->
+    <div class="vista-tarjetas">
+      <div id="contenedorTarjetas" class="row">
+        <!-- Se irán agregando las tarjetas aquí dinámicamente -->
+      </div>
+    </div>
+    
+    <!-- Indicador de estado de conexión MQTT -->
+    <div id="estadoConexion" class="alert alert-info text-center">Conectando...</div>
   </div>
 
   <script>
+    // Esperar a que se cargue completamente el documento
     document.addEventListener('DOMContentLoaded', function() {
-      // Configuración de HiveMQ Cloud (reemplaza los valores por los tuyos)
+      // ===== CONFIGURACIÓN MQTT =====
+      // Servidor MQTT HiveMQ Cloud
       const broker = "639f6e32f1f4428fb2f4ff85f5a979e3.s1.eu.hivemq.cloud";
-      const port = 8884;
-      const clientId = "web_client_" + Math.floor(Math.random() * 10000);
-      const topic = "sensor/datos";
+      const puerto = 8884;
+      // ID de cliente aleatorio para evitar colisiones con otros clientes
+      const idCliente = "cliente_web_" + Math.floor(Math.random() * 10000);
+      // Tema MQTT al que nos suscribiremos
+      const tema = "sensor/datos";
 
-      // Crear el cliente MQTT
-      const client = new Paho.MQTT.Client(broker, port, clientId);
+      // ===== CREAR CLIENTE MQTT =====
+      // Instanciar el cliente con los datos de conexión
+      const cliente = new Paho.MQTT.Client(broker, puerto, idCliente);
 
-      // Callback: conexión perdida
-      client.onConnectionLost = function(responseObject) {
-        if (responseObject.errorCode !== 0) {
-          console.log("Conexión perdida: " + responseObject.errorMessage);
-          document.getElementById("status").innerText = "Conexión perdida: " + responseObject.errorMessage;
-          document.getElementById("status").className = "alert alert-danger text-center";
+      // ===== DEFINIR CALLBACKS =====
+      // Callback que se ejecuta cuando se pierde la conexión
+      cliente.onConnectionLost = function(respuesta) {
+        if (respuesta.errorCode !== 0) {
+          console.log("Conexión perdida: " + respuesta.errorMessage);
+          document.getElementById("estadoConexion").innerText = "Conexión perdida: " + respuesta.errorMessage;
+          document.getElementById("estadoConexion").className = "alert alert-danger text-center";
         }
       };
 
-      // Callback: mensaje recibido
-      client.onMessageArrived = function(message) {
-        console.log("Mensaje recibido: " + message.payloadString);
-        agregarFilaTabla(message.payloadString);
+      // Callback que se ejecuta cuando llega un mensaje del broker MQTT
+      cliente.onMessageArrived = function(mensaje) {
+        console.log("Mensaje recibido: " + mensaje.payloadString);
+        // Procesar y mostrar los datos recibidos
+        actualizarDatos(mensaje.payloadString);
       };
 
-      // Opciones de conexión, incluyendo autenticación y SSL
-      const options = {
+      // ===== OPCIONES DE CONEXIÓN =====
+      const opciones = {
+        // Usar conexión segura (SSL/TLS)
         useSSL: true,
+        // Tiempo de espera en segundos
         timeout: 3,
+        // Función que se ejecuta al conectar exitosamente
         onSuccess: function() {
-          document.getElementById("status").innerText = "Conectado al broker MQTT";
-          document.getElementById("status").className = "alert alert-success text-center";
+          document.getElementById("estadoConexion").innerText = "Conectado al broker MQTT";
+          document.getElementById("estadoConexion").className = "alert alert-success text-center";
           console.log("Conectado");
-          client.subscribe(topic, { qos: 1 });
+          // Suscribirse al tema para recibir mensajes, QoS 1 (al menos una vez)
+          cliente.subscribe(tema, { qos: 1 });
         },
-        onFailure: function(message) {
-          document.getElementById("status").innerText = "Error al conectar: " + message.errorMessage;
-          document.getElementById("status").className = "alert alert-danger text-center";
-          console.log("Error de conexión: " + message.errorMessage);
+        // Función que se ejecuta si falla la conexión
+        onFailure: function(mensaje) {
+          document.getElementById("estadoConexion").innerText = "Error al conectar: " + mensaje.errorMessage;
+          document.getElementById("estadoConexion").className = "alert alert-danger text-center";
+          console.log("Error de conexión: " + mensaje.errorMessage);
         },
+        // Credenciales de autenticación
         userName: "suscribergit",
         password: "Suscriber23456*"
       };
 
-      // Conectar el cliente
-      client.connect(options);
+      // Iniciar la conexión con el broker MQTT
+      cliente.connect(opciones);
 
-      // Función para agregar una fila a la tabla con los datos recibidos
-      function agregarFilaTabla(payload) {
-        const tableBody = document.getElementById("dataTable");
-        const fila = document.createElement("tr");
+      // ===== FUNCIÓN PARA ACTUALIZAR INTERFAZ =====
+      // Esta función procesa los datos recibidos y actualiza la tabla y las tarjetas
+      function actualizarDatos(datos) {
         try {
-          const data = JSON.parse(payload);
-          // Crear las celdas con el orden esperado
+          // Convertir la cadena JSON a un objeto JavaScript
+          const datosJSON = JSON.parse(datos);
+          
+          // ===== ACTUALIZAR TABLA =====
+          const cuerpoTabla = document.getElementById("tablaDatos");
+          const fila = document.createElement("tr");
+          // Crear celdas para cada valor con formato
           fila.innerHTML = `
-            <td>${data.id_nodo || "-"}</td>
-            <td>${data.Contador || "-"}</td>
-            <td>${data.Temperatura || "-"}</td>
-            <td>${data.Humedad || "-"}</td>
-            <td>${data["Indice de calor"] || "-"}</td>
-            <td>${data["Humedad Caja A"] || "-"}</td>
-            <td>${data["Humedad Caja B"] || "-"}</td>
-            <td>${data.SNR || "-"}</td>
-            <td>${data.RSSI || "-"}</td>
+            <td>${datosJSON.id_nodo || "-"}</td>
+            <td>${datosJSON.Contador || "-"}</td>
+            <td>${datosJSON.Temperatura ? datosJSON.Temperatura + "°C" : "-"}</td>
+            <td>${datosJSON.Humedad ? datosJSON.Humedad + "%" : "-"}</td>
+            <td>${datosJSON["Indice de calor"] ? datosJSON["Indice de calor"] + "°C" : "-"}</td>
+            <td>${datosJSON["Humedad Caja A"] ? datosJSON["Humedad Caja A"] + "%" : "-"}</td>
+            <td>${datosJSON["Humedad Caja B"] ? datosJSON["Humedad Caja B"] + "%" : "-"}</td>
+            <td>${datosJSON.SNR || "-"}</td>
+            <td>${datosJSON.RSSI ? datosJSON.RSSI + " dBm" : "-"}</td>
           `;
+          // Añadir al principio de la tabla (mostrar primero los datos más recientes)
+          cuerpoTabla.prepend(fila);
+          
+          // ===== ACTUALIZAR TARJETAS =====
+          const contenedorTarjetas = document.getElementById("contenedorTarjetas");
+          // Obtener hora local para mostrar cuándo se recibió el dato
+          const marcaTiempo = new Date().toLocaleTimeString();
+          
+          // Crear elemento de tarjeta con los datos
+          const elementoTarjeta = document.createElement("div");
+          elementoTarjeta.className = "col-md-6 col-lg-4";
+          elementoTarjeta.innerHTML = `
+            <div class="card tarjeta">
+              <div class="card-header encabezado-tarjeta d-flex justify-content-between align-items-center">
+                <span><i class="fa fa-id-badge"></i> Nodo ${datosJSON.id_nodo || "Desconocido"}</span>
+                <span class="badge bg-secondary">#${datosJSON.Contador || "0"}</span>
+              </div>
+              <div class="card-body">
+                <!-- Fila 1: Temperatura y Humedad -->
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <div class="etiqueta-sensor"><i class="fas fa-thermometer-half"></i> Temperatura</div>
+                    <div class="valor-sensor">${datosJSON.Temperatura ? datosJSON.Temperatura + "°C" : "-"}</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="etiqueta-sensor"><i class="fas fa-tint"></i> Humedad</div>
+                    <div class="valor-sensor">${datosJSON.Humedad ? datosJSON.Humedad + "%" : "-"}</div>
+                  </div>
+                </div>
+                <!-- Fila 2: Índice de calor y SNR/RSSI -->
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <div class="etiqueta-sensor"><i class="fas fa-fire"></i> Índice de calor</div>
+                    <div class="valor-sensor">${datosJSON["Indice de calor"] ? datosJSON["Indice de calor"] + "°C" : "-"}</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="etiqueta-sensor"><i class="fas fa-signal"></i> SNR / RSSI</div>
+                    <div class="valor-sensor">${datosJSON.SNR || "-"} / ${datosJSON.RSSI ? datosJSON.RSSI + " dBm" : "-"}</div>
+                  </div>
+                </div>
+                <!-- Fila 3: Humedad Cajas A y B -->
+                <div class="row">
+                  <div class="col-6">
+                    <div class="etiqueta-sensor"><i class="fas fa-glass-water-droplet"></i> Humedad Caja A</div>
+                    <div class="valor-sensor">${datosJSON["Humedad Caja A"] ? datosJSON["Humedad Caja A"] + "%" : "-"}</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="etiqueta-sensor"><i class="fas fa-glass-water-droplet"></i> Humedad Caja B</div>
+                    <div class="valor-sensor">${datosJSON["Humedad Caja B"] ? datosJSON["Humedad Caja B"] + "%" : "-"}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card-footer text-muted">
+                <div class="marca-tiempo">Actualizado: ${marcaTiempo}</div>
+              </div>
+            </div>
+          `;
+          // Añadir al principio del contenedor (mostrar primero los datos más recientes)
+          contenedorTarjetas.prepend(elementoTarjeta);
+          
+          // ===== LIMITAR CANTIDAD DE DATOS =====
+          // Limitar a 10 tarjetas para evitar sobrecarga en móviles
+          if (contenedorTarjetas.children.length > 10) {
+            contenedorTarjetas.removeChild(contenedorTarjetas.lastChild);
+          }
+          
+          // Limitar a 20 filas en la tabla para evitar sobrecarga en memoria
+          if (cuerpoTabla.children.length > 20) {
+            cuerpoTabla.removeChild(cuerpoTabla.lastChild);
+          }
+          
         } catch (e) {
-          // Si el payload no es JSON, lo mostramos en una sola celda
-          fila.innerHTML = `<td colspan="9">${payload}</td>`;
+          // Manejo de errores si el formato JSON no es válido
+          console.error("Error al procesar el mensaje:", e);
+          const cuerpoTabla = document.getElementById("tablaDatos");
+          const fila = document.createElement("tr");
+          fila.innerHTML = `<td colspan="9">Error al procesar: ${datos}</td>`;
+          cuerpoTabla.prepend(fila);
         }
-        tableBody.prepend(fila);
       }
     });
   </script>
-  <!-- Bootstrap JS (opcional, para componentes interactivos) -->
+  <!-- JavaScript de Bootstrap para componentes interactivos -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
