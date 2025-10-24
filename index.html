@@ -100,11 +100,11 @@
               <th scope="col"><i class="fa fa-sort-numeric-asc"></i> Contador</th>
               <th scope="col"><i class="fas fa-thermometer-half"></i> Temperatura</th>
               <th scope="col"><i class="fas fa-tint"></i> Humedad</th>
-              <th scope="col"><i class="fas fa-fire"></i> Índice de calor</th>
+              <th scope="col"><i class="fas fa-fire"></i> Indice de calor</th>
               <th scope="col"><i class="fas fa-glass-water-droplet"></i> Humedad Caja A</th>
               <th scope="col"><i class="fas fa-glass-water-droplet"></i> Humedad Caja B</th>
-              <th scope="col"><i class="fas fa-signal"></i> SNR</th>
-              <th scope="col"><i class="fas fa-wifi"></i> RSSI</th>
+              <th scope="col"><i class="fas fa-signal"></i> RSSI</th>
+              <th scope="col"><i class="fas fa-wifi"></i> SNR</th>
             </tr>
           </thead>
           <tbody id="tablaDatos">
@@ -205,8 +205,8 @@
             <td>${datosJSON["Indice de calor"] ? datosJSON["Indice de calor"] + "°C" : "-"}</td>
             <td>${datosJSON["Humedad Caja A"] ? datosJSON["Humedad Caja A"] + "%" : "-"}</td>
             <td>${datosJSON["Humedad Caja B"] ? datosJSON["Humedad Caja B"] + "%" : "-"}</td>
-            <td>${datosJSON.SNR || "-"}</td>
             <td>${datosJSON.RSSI ? datosJSON.RSSI + " dBm" : "-"}</td>
+            <td>${datosJSON.SNR || "-"}</td>
           `;
           // Añadir al principio de la tabla (mostrar primero los datos más recientes)
           cuerpoTabla.prepend(fila);
@@ -237,7 +237,7 @@
                     <div class="valor-sensor">${datosJSON.Humedad ? datosJSON.Humedad + "%" : "-"}</div>
                   </div>
                 </div>
-                <!-- Fila 2: Índice de calor y SNR/RSSI -->
+                <!-- Fila 2: Índice de calor y RSSI/SNR -->
                 <div class="row mb-3">
                   <div class="col-6">
                     <div class="etiqueta-sensor"><i class="fas fa-fire"></i> Índice de calor</div>
@@ -245,7 +245,7 @@
                   </div>
                   <div class="col-6">
                     <div class="etiqueta-sensor"><i class="fas fa-signal"></i> SNR / RSSI</div>
-                    <div class="valor-sensor">${datosJSON.SNR || "-"} / ${datosJSON.RSSI ? datosJSON.RSSI + " dBm" : "-"}</div>
+                    <div class="valor-sensor">${datosJSON.RSSI ? datosJSON.RSSI + " dBm" : "-"}/ ${datosJSON.SNR || "-"}</div>
                   </div>
                 </div>
                 <!-- Fila 3: Humedad Cajas A y B -->
