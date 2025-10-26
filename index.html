@@ -245,7 +245,7 @@
                   </div>
                   <div class="col-6">
                     <div class="etiqueta-sensor"><i class="fas fa-signal"></i> RSSI / SNR</div>
-                    <div class="valor-sensor">${datosJSON.RSSI + " dBm" : "-"} / ${datosJSON.SNR || "-"}</div>
+                    <div class="valor-sensor">${datosJSON.RSSI ? datosJSON.RSSI + " dBm" : "-"} / ${datosJSON.SNR || "-"}</div>
                   </div>
                 </div>
                 <!-- Fila 3: Humedad Cajas A y B -->
